@@ -5,61 +5,6 @@ from datetime import datetime
 
 ############## EDGAR CONFIGURATION ##########
 
-#Define the potential synonims for the different financial concepts in EDGAR taxonomies
-revenues = ["Revenues", "SalesRevenueNet", "SalesRevenueServicesNet", "RevenuesNetOfInterestExpense", "RealEstateRevenueNet", "RevenueFromContractWithCustomerIncludingAssessedTax", \
-            "RevenueFromContractWithCustomerExcludingAssessedTax", "SalesRevenueGoodsNet", "RevenuesExcludingInterestAndDividends", "RegulatedAndUnregulatedOperatingRevenue"]
-costOfRevenues = ["CostOfRevenue", "CostOfGoodsAndServicesSold", "CostOfGoodsSold", "CostOfServices", "CostOfOtherPropertyOperatingExpense"]
-grossProfit =  ["GrossProfit"]
-researchDevelopmentExpense =  ["ResearchAndDevelopmentExpense", "ResearchAndDevelopmentExpenseExcludingAcquiredInProcessCost"]
-operatingExpenses = ["OperatingExpenses", "CostsAndExpenses", "OperatingCostsAndExpenses", "OperatingExpensesCogs", "BenefitsLossesAndExpenses"]
-operatingIncome = ["OperatingIncomeLoss"]
-interestExpenseNet = ["InterestIncomeExpenseNonoperatingNet", "InterestExpenseOperating"]
-interestExpense = ["InterestExpense"]
-interestIncome = ["InvestmentIncomeInterest", "InterestIncomeOther"]
-incomeContinuingOperations = ["IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest", "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments"]
-taxesExpense = ["IncomeTaxExpenseBenefit"]
-netIncome = ["NetIncomeLoss", "NetIncomeLossAvailableToCommonStockholdersBasic", "ProfitLoss"]
-dilutedEps = ["EarningsPerShareDiluted"]
-dilutedSharesOutstanding = ["WeightedAverageNumberOfDilutedSharesOutstanding"]
-
-cashAndEquivalents = ["CashAndCashEquivalentsAtCarryingValue"]
-inventories = ["InventoryNet"]
-currentAssets = ["AssetsCurrent", "InvestmentsAndCash"]
-propertyAndEquipment = ["PropertyPlantAndEquipmentNet", "PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization"]
-goodwill =  ["Goodwill"]
-intangibleAssets = ["IntangibleAssetsNetExcludingGoodwill", "FiniteLivedIntangibleAssetsNet"]
-assets = ["Assets"]
-shortTermDebt = ["DebtCurrent", "LongTermDebtCurrent", "ShortTermBorrowings"]
-currentLiabilities = ["LiabilitiesCurrent"]
-longTermDebt = ["LongTermDebtNoncurrent", "LongTermDebtAndCapitalLeaseObligations", "OtherLongTermDebtNoncurrent"]
-liabilities = ["Liabilities"]
-retainedEarnings = ["RetainedEarningsAccumulatedDeficit"]
-equity = ["StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"]
-
-amortization = ["AmortizationOfIntangibleAssets"]
-depreciation = ["Depreciation"]
-depreciationAndAmortization = ["DepreciationDepletionAndAmortization", "DepreciationAmortizationAndAccretionNet"]
-operatingCashFlow = ["NetCashProvidedByUsedInOperatingActivities", "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"]
-capex = ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets", "PaymentsToAcquireOtherPropertyPlantAndEquipment", "PaymentsForCapitalImprovements"]
-investingCashFlow = ["NetCashProvidedByUsedInInvestingActivities", "NetCashProvidedByUsedInInvestingActivitiesContinuingOperations"]
-financingCashFlow = ["NetCashProvidedByUsedInFinancingActivities", "NetCashProvidedByUsedInFinancingActivitiesContinuingOperations"]
-
-#Define the financial concepts needed to build the raw database
-financial_statements = [revenues, costOfRevenues, grossProfit, researchDevelopmentExpense, operatingExpenses, operatingIncome, interestExpenseNet, interestExpense, interestIncome, incomeContinuingOperations, \
-        taxesExpense, netIncome, dilutedEps, dilutedSharesOutstanding, cashAndEquivalents, inventories, currentAssets, propertyAndEquipment, goodwill, intangibleAssets, assets, shortTermDebt, currentLiabilities, \
-        longTermDebt, liabilities, retainedEarnings, equity, amortization, depreciation, depreciationAndAmortization, operatingCashFlow, capex, investingCashFlow, financingCashFlow]
-
-#Define a dictionary with the translations for the column names in the basic csv file generated transforming the raw json data
-columns_translation = {'Revenues': 'REVENUES', 'CostOfRevenue': 'COGS', 'GrossProfit': 'GROSSPROFIT', 'ResearchAndDevelopmentExpense': 'R&D', 'OperatingExpenses': 'OPEXPENSES', \
-                       'OperatingIncomeLoss': 'OPINCOME', 'InterestIncomeExpenseNonoperatingNet': 'INTERESTNET', 'InterestExpense': 'INTERESTEXP', 'InvestmentIncomeInterest': 'INTERESTINC', \
-                        'IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest': 'NETINC', 'EarningsPerShareDiluted': 'EPS', \
-                        'WeightedAverageNumberOfDilutedSharesOutstanding': 'SHARES', 'CashAndCashEquivalentsAtCarryingValue': 'CASH', 'InventoryNet': 'INVENTORY', \
-                        'AssetsCurrent': 'CASSETS', 'PropertyPlantAndEquipmentNet': 'PROPERTY', 'Goodwill': 'GOODWILL', 'IntangibleAssetsNetExcludingGoodwill': 'INTASSETS', \
-                        'Assets': 'ASSETS', 'DebtCurrent': 'STDEBT', 'LiabilitiesCurrent': 'CLIABILITIES', 'LongTermDebtNoncurrent': 'LTDEBT', 'Liabilities': 'LIABILITIES', \
-                        'RetainedEarningsAccumulatedDeficit': 'RETEARNINGS', 'StockholdersEquity': 'EQUITY', 'AmortizationOfIntangibleAssets': 'AMORTIZATION', 'Depreciation': 'DEPRECIATION', \
-                        'DepreciationDepletionAndAmortization': 'DEP&AMORT', 'NetCashProvidedByUsedInOperatingActivities': 'OPCF', 'PaymentsToAcquirePropertyPlantAndEquipment': 'CAPEX', \
-                        'NetCashProvidedByUsedInInvestingActivities': 'INCF', 'NetCashProvidedByUsedInFinancingActivities': 'FICF'}
-
 #URLs for the API
 endPoint = "https://data.sec.gov/api/xbrl/frames/us-gaap/{}/USD/CY{}.json"
 companyFactsURL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{}.json"
@@ -82,10 +27,9 @@ ERROR_MESSAGE2 = "The value you submitted is not valid"
 
 ############## GLOBAL CONFIGURATION ##########
 
-DATABASE_PATH = os.path.dirname(__file__) + "\\DATABASE\\"
-DATABASE_RAW_PATH = DATABASE_PATH + "\\RAW\\"
-LOG_PATH = os.path.dirname(__file__) + "\\LOG\\"
-BACKUP_PATH = os.path.dirname(__file__) + "\\BACKUP\\"
+DATABASE_PATH = os.path.dirname(os.path.dirname(__file__)) + "\\database\\"
+BACKUP_PATH = DATABASE_PATH + "\\backup\\"
+LOG_PATH = os.path.dirname(os.path.dirname(__file__)) + "\\log\\"
 years = range(2009, datetime.now().year)
 
 

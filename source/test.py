@@ -45,13 +45,8 @@ logging.basicConfig(filename=LOG_FILE,
 	format="%(asctime)s - [%(levelname)s] - %(message)s", datefmt="%H:%M:%S", 
 	level=logging.INFO)
 
-REVENUES_FILE = config.DATABASE_RAW_PATH + "Revenues.csv"
-COST_OF_REVENUES_FILE = config.DATABASE_RAW_PATH + "CostOfRevenue.csv"
-OPERATING_EXPENSES_FILE = config.DATABASE_RAW_PATH + "OperatingExpenses.csv"
-
-ABBV_JSON_RAW_FILE = config.DATABASE_RAW_PATH + "ABBV.json"
-
 logging.info("****************************************************************")
+edgar.download_company_raw_json("AAPL")
 #config.check_folders()
 #edgar.create_raw_database()
 #edgar.create_table(config.operatingExpenses)
@@ -64,4 +59,4 @@ logging.info("****************************************************************")
 #df3 = edgar.build_basic_financials_table(config.financial_statements, json_data)
 #print(df2)
 
-edgar.add_company_to_database("PFE")
+#edgar.add_company_to_database("PFE")
