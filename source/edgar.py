@@ -11,13 +11,16 @@ import configuration as config
 
 
 def download_company_raw_json(ticker=""):
-	"""Downloads the table with RAW data for the received company ticker and stores it into a json file.
+	"""Downloads from EDGAR database the json with RAW data for the received company ticker and stores it into a json file.
 	Returns the downloaded json or an empty one in case of errors"""
 	logging.info(f"edgar.download_company_raw_json: Downloading company facts for ticker {ticker}")
+	json_empty = {}
 	out_filename = config.DATABASE_PATH + ticker + ".json"
 	cik = get_cik(ticker)
+	if cik == "ERROR":
+		logging.error(f"edgar.download_company_raw_json: CIK for ticker {ticker} cannot be obtained")
+		return json_empty
 	url = config.companyFactsURL.format(cik)
-	json_empty = {}
 	logging.info(f"edgar.download_company_raw_json: Downloading from {url}")
 	try:
 		response = get(url, headers=config.HEADERS)
@@ -54,6 +57,47 @@ def download_company_raw_json(ticker=""):
 		else:
 			logging.error(f"edgar.download_company_raw_table: Downloaded json is not valid - Code: {response.status_code} / Type: {response.headers['content-type']}")
 			return json_empty
+
+
+def create_table_for_company(ticker=""):
+	"""Obtains from EDGAR database a table formatted for training for the provided ticker.
+	Returns the table as a pandas dataframe or an emptz dataframe in case of error"""
+	logging.info(f"edgar.create_table_for_company: Creating company table for ticker {ticker}")
+	company_table = pd.DataFrame()
+	if not ticker:
+		logging.error(f"edgar.create_table_for_company: Ticker empty.")
+		return company_table
+	company_json = download_company_raw_json(ticker)
+	if not company_json:
+		logging.error(f"edgar.create_table_for_company: Json empty. The table cannot be created for ticker {ticker}")
+		return company_table
+	else:
+		for financial_concept in company_json['facts']['us-gaap'].keys():
+			logging.info(f"edgar.create_table_for_company: Getting financial concept {financial_concept}")
+			financial_concept_unit = list(company_json['facts']['us-gaap'][financial_concept]['units'])[0]
+			logging.info(f"edgar.create_table_for_company: Unit for financial concept {financial_concept}: {financial_concept_unit}")
+			financial_concept_json_array = []
+			try:
+				financial_concept_json_array = company_json['facts']['us-gaap'][financial_concept]['units'][financial_concept_unit]
+			except Exception as err:
+				logging.warning(f"edgar.create_table_for_company: Not possible to obtain financial concept {financial_concept} - {err}")
+			else:
+				logging.info(f"edgar.create_table_for_company: Array found for financial concept {financial_concept}")
+			if not financial_concept_json_array:
+				logging.warning(f"edgar.create_table_for_company: Array for financial concept {financial_concept} is empty")
+			else:
+				logging.info(f"edgar.create_table_for_company: Creating dataframe from financial concept array")
+				try:
+					financial_concept_df = pd.json_normalize(financial_concept_json_array)[['val', 'fy', 'form', 'frame']]
+				except Exception as err:
+					logging.warning(f"edgar.create_table_for_company: Dataframe for financial concept {financial_concept} cannot be created - {err}")
+				else:
+					financial_concept_df['unit'] = financial_concept_unit
+					financial_concept_df['concept'] = financial_concept
+					financial_concept_df['ticker'] = ticker
+					logging.info(f"edgar.create_table_for_company: Appending financial concept dataframe to company table dataframe")
+					company_table = pd.concat([company_table, financial_concept_df])
+		return company_table
 
 
 def get_cik(ticker=""):

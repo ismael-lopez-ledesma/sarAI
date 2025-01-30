@@ -46,14 +46,30 @@ logging.basicConfig(filename=LOG_FILE,
 	level=logging.INFO)
 
 logging.info("****************************************************************")
-edgar.download_company_raw_json("AAPL")
+#edgar.download_company_raw_json("AAPL")
+
+
 #config.check_folders()
 #edgar.create_raw_database()
 #edgar.create_table(config.operatingExpenses)
 #check_file(OPERATING_EXPENSES_FILE)
 #edgar.download_company_raw_json("ABBV")
-#with open(ABBV_JSON_RAW_FILE, 'r') as file:
+
+#AAPL_JSON_RAW_FILE = config.DATABASE_PATH + "AAPL.json"
+#with open(AAPL_JSON_RAW_FILE, 'r') as file:
 #    json_data = json.load(file)
+#for object in json_data['facts']['us-gaap'].keys():
+#    for unit in config.possible_units:
+#        try:
+#            json_object_array = json_data['facts']['us-gaap'][object]['units'][unit]
+#        except Exception as err:
+#            print("Not valid unit")
+#        else:
+#            print(list(json_data['facts']['us-gaap'][object]['units'])[0])
+
+company_DF = edgar.create_table_for_company("ABBV")
+print(company_DF)
+
 #df2 = edgar.get_financial_concept_from_json(["Dummy"], json_data)
 #df2 = edgar.get_financial_concept_from_json(config.interestIncome, json_data)
 #df3 = edgar.build_basic_financials_table(config.financial_statements, json_data)
