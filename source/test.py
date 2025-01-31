@@ -56,9 +56,16 @@ logging.info("****************************************************************")
 #check_file(OPERATING_EXPENSES_FILE)
 #edgar.download_company_raw_json("ABBV")
 
+#BAM_JSON_RAW_FILE = config.DATABASE_PATH + "BAM.json"
 #AAPL_JSON_RAW_FILE = config.DATABASE_PATH + "AAPL.json"
+#with open(BAM_JSON_RAW_FILE, 'r') as file:
+#    json_data1 = json.load(file)
 #with open(AAPL_JSON_RAW_FILE, 'r') as file:
-#    json_data = json.load(file)
+#    json_data2 = json.load(file)
+#if "us-gaap" not in json_data1['facts']:
+#    print("Wrong format 1")
+#if "us-gaap" not in json_data2['facts']:
+#    print("Wrong format 2")
 #for object in json_data['facts']['us-gaap'].keys():
 #    for unit in config.possible_units:
 #        try:
@@ -77,8 +84,10 @@ logging.info("****************************************************************")
 #industry = yahoo.get_company_industry("DIS")
 #print(industry)
 
-sic = edgar.get_sic("KVUE")
-print(sic)
+#sic = edgar.get_sic("KVUE")
+#print(sic)
+
+edgar.create_training_database()
 
 #df2 = edgar.get_financial_concept_from_json(["Dummy"], json_data)
 #df2 = edgar.get_financial_concept_from_json(config.interestIncome, json_data)

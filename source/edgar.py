@@ -14,6 +14,57 @@ import configuration as config
 import yahoo
 
 
+def create_training_database():
+	"""Creates a csv file containing the financial concepts extracted from EDGAR database for all the companies defined in the INDEX file.
+	Returns the number of companies added to the table
+	The csv table will be used afterwards for training"""
+	if  not os.path.isfile(config.EDGAR_INDEX_FILE_PATH):
+		logging.error(f"edgar.create_training_database: INDEX file does not exist in the expected location: {config.EDGAR_INDEX_FILE_PATH}")
+		return 0
+	logging.info(f"edgar.create_training_database: Reading list of companies from INDEX file {config.EDGAR_INDEX_FILE_PATH}")
+	try:
+		companies_list = pd.read_csv(config.EDGAR_INDEX_FILE_PATH).iloc[:, 0]
+	except Exception as err:
+		logging.error(f"edgar.create_training_database: INDEX file is not well formatted - {err}")
+		return 0
+	else:
+		logging.info(f"edgar.create_training_database: List of companies obtained from INDEX file")
+	companies_table = pd.DataFrame()
+	companies_in_table = 0
+	for company in companies_list:
+		logging.info(f"edgar.create_training_database: Creating dataframe for company {company}")
+		company_df = create_table_for_company(company)
+		if company_df.empty:
+			logging.warning(f"edgar.create_training_database: Dataframe for company {company} cannot be created")
+		else:
+			logging.info(f"edgar.create_training_database: Dataframe for company {company} created. Attaching it to the main table")
+			try:
+				companies_table = pd.concat([companies_table, company_df])
+			except Exception as err:
+				logging.warning(f"edgar.create_training_database: Dataframe for company {company} cannot be attached to the main table - {err}")
+			else:
+				logging.info(f"edgar.create_training_database: Dataframe for company {company} attached to the main table")
+				companies_in_table +=1
+	logging.info(f"edgar.create_training_database: Main table created with {companies_in_table} companies")
+	if os.path.isfile(config.EDGAR_TRAINING_FILE):
+		logging.info(f"edgar.create_training_database: File {config.EDGAR_TRAINING_FILE} already exists")
+		backup_filename = config.BACKUP_PATH + "01_EDGAR_TRAINING_TABLE_" + datetime.datetime.now().strftime("%Y%m%d") + ".csv"
+		logging.info(f"edgar.create_training_database: Creating backup copy {backup_filename}.")
+		try:
+			shutil.copyfile(config.EDGAR_TRAINING_FILE, backup_filename)
+		except Exception as err:
+			logging.warning(f"edgar.create_training_database: Backup copy {backup_filename} cannot be created.")
+	logging.info(f"edgar.create_training_database: Storing main table into {config.EDGAR_TRAINING_FILE}")
+	try:
+		companies_table.to_csv(config.EDGAR_TRAINING_FILE)
+	except Exception as err:
+		logging.error(f"edgar.create_training_database: The training database cannot be stored - {err}")
+		return 0
+	else:
+		logging.info(f"edgar.create_training_database: Training database with {companies_in_table} companies stored into {config.EDGAR_TRAINING_FILE}")
+		return companies_in_table
+	
+
 def download_company_raw_json(ticker=""):
 	"""Downloads from EDGAR database the json with RAW data for the received company ticker and stores it into a json file.
 	Returns the downloaded json or an empty one in case of errors"""
@@ -76,6 +127,9 @@ def create_table_for_company(ticker=""):
 		logging.error(f"edgar.create_table_for_company: Json empty. The table cannot be created for ticker {ticker}")
 		return company_table
 	else:
+		if "us-gaap" not in company_json['facts']:
+			logging.error(f"edgar.create_table_for_company: Json not formatted as expected, us-gaap key missing. The table cannot be created for ticker {ticker}")
+			return company_table
 		for financial_concept in company_json['facts']['us-gaap'].keys():
 			logging.info(f"edgar.create_table_for_company: Getting financial concept {financial_concept}")
 			financial_concept_unit = list(company_json['facts']['us-gaap'][financial_concept]['units'])[0]
@@ -100,11 +154,13 @@ def create_table_for_company(ticker=""):
 					financial_concept_df['concept'] = financial_concept
 					logging.info(f"edgar.create_table_for_company: Appending financial concept dataframe to company table dataframe")
 					company_table = pd.concat([company_table, financial_concept_df])
+		logging.info(f"edgar.create_table_for_company: Adding company information columns")
 		company_table['ticker'] = ticker
 		company_table['sector'] = yahoo.get_company_sector(ticker)
 		company_table['industry'] = yahoo.get_company_industry(ticker)
 		company_table['activity'] = get_activity(ticker)
 		company_table['sic'] = get_sic(ticker)
+		logging.info(f"edgar.create_table_for_company: Table for ticker {ticker} created")
 		return company_table
 
 
