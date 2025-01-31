@@ -1,4 +1,5 @@
 import edgar
+import yahoo
 import configuration as config
 import pandas as pd
 from datetime import datetime
@@ -67,8 +68,17 @@ logging.info("****************************************************************")
 #        else:
 #            print(list(json_data['facts']['us-gaap'][object]['units'])[0])
 
-company_DF = edgar.create_table_for_company("ABBV")
-print(company_DF)
+#print(datetime.now().strftime("%H:%M:%S"))
+#company_DF = edgar.create_table_for_company("AAPL")
+#print(datetime.now().strftime("%H:%M:%S"))
+#print(company_DF)
+
+#yahoo.check_connection("AAPL")
+#industry = yahoo.get_company_industry("DIS")
+#print(industry)
+
+sic = edgar.get_sic("KVUE")
+print(sic)
 
 #df2 = edgar.get_financial_concept_from_json(["Dummy"], json_data)
 #df2 = edgar.get_financial_concept_from_json(config.interestIncome, json_data)

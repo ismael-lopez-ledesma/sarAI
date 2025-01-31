@@ -1,3 +1,6 @@
+#This library contains tools to get data from edgar website and handle different
+#edgar related data structures.
+
 from requests import get
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -8,6 +11,7 @@ import datetime
 import os
 import shutil
 import configuration as config
+import yahoo
 
 
 def download_company_raw_json(ticker=""):
@@ -23,7 +27,7 @@ def download_company_raw_json(ticker=""):
 	url = config.companyFactsURL.format(cik)
 	logging.info(f"edgar.download_company_raw_json: Downloading from {url}")
 	try:
-		response = get(url, headers=config.HEADERS)
+		response = get(url, headers=config.EDGAR_HEADERS)
 	except Exception as err:
 		logging.error(f"edgar.download_company_raw_json: Download not possible - {err}")
 		return json_empty
@@ -94,9 +98,13 @@ def create_table_for_company(ticker=""):
 				else:
 					financial_concept_df['unit'] = financial_concept_unit
 					financial_concept_df['concept'] = financial_concept
-					financial_concept_df['ticker'] = ticker
 					logging.info(f"edgar.create_table_for_company: Appending financial concept dataframe to company table dataframe")
 					company_table = pd.concat([company_table, financial_concept_df])
+		company_table['ticker'] = ticker
+		company_table['sector'] = yahoo.get_company_sector(ticker)
+		company_table['industry'] = yahoo.get_company_industry(ticker)
+		company_table['activity'] = get_activity(ticker)
+		company_table['sic'] = get_sic(ticker)
 		return company_table
 
 
@@ -105,7 +113,7 @@ def get_cik(ticker=""):
 	url = config.BROWSE_URL.format(ticker)
 	logging.info(f"edgar.get_cik: Getting CIK from {url}")
 	try:
-		f = get(url, stream = True, headers=config.HEADERS)
+		f = get(url, stream = True, headers=config.EDGAR_HEADERS)
 	except Exception as err:
 		logging.warning(f"edgar.get_cik: Edgar CIK cannot be obtained - {err}")
 		return "ERROR"
@@ -132,7 +140,7 @@ def check_cik(cik=""):
 		return False
 	logging.info(f"edgar.check_cik: Checking connection to {url}")
 	try:
-		f = get(url, stream = True, headers=config.HEADERS)
+		f = get(url, stream = True, headers=config.EDGAR_HEADERS)
 	except Exception as err:
 		logging.warning(f"edgar.check_cik: Cannot connect to edgar with CIK {cik}")
 		return False
@@ -144,15 +152,71 @@ def check_cik(cik=""):
 			logging.info(f"edgar.check_cik: CIK {cik} is valid")
 			return True
 
+def get_activity(ticker=""):
+	"""gets company activity from EDGAR database for the provided ticker"""
+	url = config.BROWSE_URL.format(ticker)
+	logging.info(f"edgar.get_activity: Getting company activity from {url}")
+	try:
+		f = get(url, stream = True, headers=config.EDGAR_HEADERS)
+	except Exception as err:
+		logging.warning(f"edgar.get_activity: Company activity cannot be obtained - {err}")
+		return "N/A"
+	else:
+		if config.ERROR_MESSAGE1 in str(f.content) or config.ERROR_MESSAGE1 in str(f.content):
+			logging.warning(f"edgar.get_activity: Company activity cannot be obtained.")
+			return "N/A"
+		else:
+			soup = BeautifulSoup(f.text, "html.parser")
+			try:
+				activity = str(soup.find("p", class_="identInfo").find_all("a")[0].next_element.next_element).split("- ")[1].replace(",", " &")
+			except AttributeError as err:
+				logging.warning(f"edgar.get_activity: Activity not found for ticker {ticker} - {err}")
+				return "N/A"
+			except Exception as err:
+				logging.warning(f"edgar.get_activity: Activity not found for ticker {ticker} - {err}")
+				return "N/A"
+			else:
+				logging.info(f"edgar.get_activity: Activity found for {ticker}: {activity}")
+				return activity
 
-def translate_frame_to_fiscal_year(frame=""):
-	"""Translates a frame in instant format (CY2014 or CY2013Q4I) into the corresponding fiscal year"""
-	logging.info(f"edgar.translate_frame_to_fiscal_year: Translating frame {frame}")
-	fiscal_year = frame.replace("CY", "")
-	if fiscal_year.endswith("Q4I"):
-		logging.info(f"edgar.translate_frame_to_fiscal_year: Instant frame, removing sufix and adding one")
-		fiscal_year = fiscal_year.replace("Q4I", "")
-		fiscal_year = str(int(fiscal_year) + 1)
-	logging.info(f"edgar.translate_frame_to_fiscal_year: Returning fiscal year {fiscal_year}")
-	return fiscal_year
-	
+
+def get_sic(ticker=""):
+	"""gets company SIC (Standard Industrial Code) from EDGAR database for the provided ticker"""
+	url = config.BROWSE_URL.format(ticker)
+	logging.info(f"edgar.get_sic: Getting company SIC from {url}")
+	try:
+		f = get(url, stream = True, headers=config.EDGAR_HEADERS)
+	except Exception as err:
+		logging.warning(f"edgar.get_sic: Company SIC cannot be obtained - {err}")
+		return "N/A"
+	else:
+		if config.ERROR_MESSAGE1 in str(f.content) or config.ERROR_MESSAGE1 in str(f.content):
+			logging.warning(f"edgar.get_sic: Company SIC cannot be obtained.")
+			return "N/A"
+		else:
+			soup = BeautifulSoup(f.text, "html.parser")
+			try:
+				sic = str(soup.find("p", class_="identInfo").find_all("a")[0].next_element)
+			except AttributeError as err:
+				logging.warning(f"edgar.get_sic: SIC not found for ticker {ticker} - {err}")
+				return "N/A"
+			except Exception as err:
+				logging.warning(f"edgar.get_sic: SIC not found for ticker {ticker} - {err}")
+				return "N/A"
+			else:
+				if not check_sic(sic):
+					logging.warning(f"edgar.get_sic: Retrieved SIC {sic} is not valid")
+					return "N/A"
+				else:
+					logging.info(f"edgar.get_sic: SIC found for {ticker}: {sic}")
+					return sic
+
+
+def check_sic(sic=""):
+	"""Checks if the provided sic has a valid format"""
+	if len(sic) != 4 or not sic.isdigit():
+		logging.warning(f"edgar.check_sic: SIC {sic} not valid: must have 4 numbers")
+		return False
+	else:
+		logging.info(f"edgar.check_sic: SIC {sic} valid")
+		return True
